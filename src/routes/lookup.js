@@ -1,7 +1,8 @@
-const { lookupUser } = require("../lookupUser");
 const { getnodebyuser, getAllNodes } = require("../servers");
+console.log("Found succesfully");
+const { lookupUser } = require("../lookupUser");
 const { v4: uuidv4 } = require("uuid");
-const { servers } = require("../servers");
+const { servers, addNode } = require("../servers");
 
 const seenIds = new Set();
 

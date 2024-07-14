@@ -19,4 +19,4 @@ function getnodebyuser(user) {
   return servers.find((node) => node.user === user);
 }
 
-module.exports = { getAllNodes, addNode, getnodebyuser };
+module.exports = { getAllNodes, addNode, getnodebyuser, servers }; //remove server import later

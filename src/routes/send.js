@@ -8,7 +8,7 @@ const { getRandomSeedServer } = require("../getRandomSeedServer");
 async function send(req, res) {
   const { to, message } = req.body;
   try {
-    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
+    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4()); // instead of getting random server , we can also start with our owm self if we are implementing a
     console.log("found user", foundUser);
     await sendMessage(process.env.USERNAME, message, foundUser.uri);
     return res.json({ message: "success" });
@@ -18,4 +18,15 @@ async function send(req, res) {
   }
 }
 
-module.exports = { send }; // exporting the function message
+async function findUser(to) {
+  try {
+    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
+    console.log("found user", foundUser);
+    return foundUser; // Return the found user information
+  } catch (err) {
+    console.log(err);
+    throw new Error("User not found");
+  }
+}
+
+module.exports = { send, findUser }; // exporting the function message
