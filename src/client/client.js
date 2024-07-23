@@ -1,13 +1,13 @@
-const { lookupUser } = require("./lookupUser");
-const { sendMessage } = require("./sendMessage"); // Placeholder import for sendMessage
+const { lookupUser } = require("../util/lookupUser.js");
+const { sendMessage } = require("../util/sendMessage.js"); // Placeholder import for sendMessage
 const { v4: uuidv4 } = require("uuid");
-const { getCurrentUri } = require("./getCurrentUri");
-const dotenv = require("dotenv"); // Import dotenv to manage environment variables
-dotenv.config(); // Initialize dotenv to read environment variables from .env file
-const { getRandomSeedServer } = require("./getRandomSeedServer");
+const { getCurrentUri } = require("../util/getCurrentUri.js");
+const dotenv = require("dotenv"); 
+dotenv.config(); 
+const { getRandomSeedServer } = require("../server/getRandomSeedServer.js");
 const clientIo = require("socket.io-client");
 const readline = require("readline");
-const { rl } = require("./readlineinterface.js");
+const { rl } = require("../util/readlineinterface.js");
 
 async function initiateChat() {
   rl.question("Enter the username you want to connect to: ", async (input) => {

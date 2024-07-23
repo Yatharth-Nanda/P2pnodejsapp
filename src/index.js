@@ -1,19 +1,21 @@
 const express = require("express");
 const { register } = require("./routes/register.js");
-const { getRandomSeedServer } = require("./getRandomSeedServer.js");
-const { registerWithSeedServer } = require("./regsiterWithSeedServer.js");
+const { getRandomSeedServer } = require("./server/getRandomSeedServer.js");
+const {
+  registerWithSeedServer,
+} = require("./server/regsiterWithSeedServer.js");
 const { lookup } = require("./routes/lookup.js");
-const { addNode } = require("./servers.js");
-const { seeds } = require("./seeds.js");
-const { servers } = require("./servers.js");
+const { addNode } = require("./server/servers.js");
+const { seeds } = require("./server/seeds.js");
+const { servers } = require("./server/servers.js");
 const { send } = require("./routes/send.js");
 const { message } = require("./routes/message.js");
-const setupSocketEvents = require("./serverevents");
-const { initiateChat } = require("./client.js");
+const setupSocketEvents = require("./server/serverevents");
+const { initiateChat } = require("./client/client.js");
 const http = require("http");
 const socketIo = require("socket.io"); // Corrected import for socket.ioyat
 const readline = require("readline");
-const { rl } = require("./readlineinterface.js");
+const { rl } = require("./util/readlineinterface.js");
 
 const port = process.env.PORT || 4000;
 
@@ -42,7 +44,7 @@ server.listen(port, () => {
   console.log(`Listening on port ${port}`);
 });
 
-setTimeout(intialise, 10000); // does not block thread
+setTimeout(intialise, 10000); 
 
 async function intialise() {
   // set up new instances of the server which will register with a seed server

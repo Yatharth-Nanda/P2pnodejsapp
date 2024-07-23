@@ -1,8 +1,9 @@
-const { getnodebyuser, getAllNodes } = require("../servers");
+const { getnodebyuser, getAllNodes } = require("../server/servers");
 console.log("Found succesfully");
-const { lookupUser } = require("../lookupUser");
+const { lookupUser } = require("../util/lookupUser");
 const { v4: uuidv4 } = require("uuid");
-const { servers, addNode } = require("../servers");
+const { servers, addNode } = require("../server/servers");
+const { seeds } = require("../server/seeds");
 
 const seenIds = new Set();
 
@@ -17,34 +18,29 @@ async function lookup(req, res) {
   }
 
   seenIds.add(requestId); // this has to
-  const serverByUser = getnodebyuser(user); //similar to khud pe look up chalana
+  const serverByUser = getnodebyuser(user); //searches for user in already existing collection
   console.log(`a request for ${user} was made `, serverByUser);
 
   // look up in exisiting list of user
   if (!serverByUser) {
-    //   console.log("entering seed lookup");
     let foundUser;
 
-    for (let server of getAllNodes()) {
-      //   console.log(`checking ${server.user}`);
+    for (let seed of seeds) {
       try {
-        foundUser = await lookupUser(server.uri, user, requestId);
+        foundUser = await lookupUser(seed.uri, user, requestId);
       } catch (err) {}
-      //  console.log("found user", foundUser);
     }
 
     if (foundUser) {
-      addNode(foundUser);
+      addNode(foundUser); //caching the user
+      console.log("found user and added to this server");
       return res.status(200).json(foundUser);
     } else {
       return res.status(404).json({ message: "user not found" });
     }
   }
 
-  //  console.log("user found on this node");
-
   res.status(200).json(serverByUser);
-  // console.log("server by user", serverByUser);
 }
 
 module.exports = { lookup };

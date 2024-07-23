@@ -1,4 +1,4 @@
-const { addNode } = require("../servers"); // used destrcutured imports for functions
+const { addNode } = require("../server/servers"); // used destrcutured imports for functions
 function register(req, res) {
   const { user, uri } = req.body;
 
