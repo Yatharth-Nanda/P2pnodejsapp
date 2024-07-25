@@ -14,6 +14,7 @@ This Node.js application implements a peer-to-peer (P2P) network, allowing users
 
 - **Node.js**: Ensure you have Node.js installed. You can download it from [nodejs.org](https://nodejs.org/).
 - **npm**: Node.js package manager, which comes with Node.js.
+- **socket.io** library
 
 ## Installation
 
