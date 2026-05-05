@@ -1,5 +1,5 @@
 // socketEvents.js
-const { saveMessage } = require("../store");
+const { saveMessage, getCurrentUser } = require("../store");
 
 module.exports = function (io) {
   io.on("connection", (socket) => {
@@ -13,7 +13,7 @@ module.exports = function (io) {
       // Persist the socket chat message
       saveMessage({
         from: sender,
-        to: process.env.USERNAME || "unknown",
+        to: getCurrentUser(),
         message: line,
       });
     });

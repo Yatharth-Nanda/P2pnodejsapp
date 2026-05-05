@@ -1,10 +1,8 @@
 const { lookupUser } = require("../util/lookupUser");
 const { sendMessage } = require("../util/sendMessage");
 const { v4: uuidv4 } = require("uuid");
-const { getCurrentUri } = require("../util/getCurrentUri");
-const dotenv = require("dotenv");
 const { getRandomSeedServer } = require("../server/getRandomSeedServer");
-const { saveMessage } = require("../store");
+const { saveMessage, getCurrentUser } = require("../store");
 
 async function send(req, res) {
   const { to, message } = req.body;
@@ -19,9 +17,9 @@ async function send(req, res) {
 
     // Persist the outgoing message
     saveMessage({
-      from: process.env.USERNAME || "unknown",
-      to: to,
-      message: message,
+      from: getCurrentUser(),
+      to,
+      message,
     });
 
     return res.json({ message: "success" });

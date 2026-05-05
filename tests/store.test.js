@@ -10,26 +10,26 @@ const {
   loadPeers,
   savePeers,
   saveMessage,
-  loadMessages,
   getMessages,
+  getCurrentUser,
   DATA_DIR,
 } = require("../src/store");
 
-// Helper to clean up test data
-function cleanup() {
-  const peersFile = path.join(DATA_DIR, "peers.json");
-  const messagesFile = path.join(DATA_DIR, "messages.ndjson");
-  if (fs.existsSync(peersFile)) fs.unlinkSync(peersFile);
-  if (fs.existsSync(messagesFile)) fs.unlinkSync(messagesFile);
-}
+const { cleanup } = require("./helpers");
 
 function runTests() {
   console.log("Running store persistence tests...\n");
 
+  // --- getCurrentUser tests ---
+
+  console.log("Test: getCurrentUser returns USERNAME env var");
+  assert.strictEqual(getCurrentUser(), "testuser");
+  console.log("  PASSED\n");
+
   // --- Peer persistence tests ---
 
   console.log("Test: loadPeers returns empty array when no file exists");
-  cleanup();
+  cleanup(DATA_DIR);
   const emptyPeers = loadPeers();
   assert.deepStrictEqual(emptyPeers, []);
   console.log("  PASSED\n");
@@ -54,16 +54,16 @@ function runTests() {
 
   // --- Message persistence tests ---
 
-  console.log("Test: loadMessages returns empty array when no file exists");
-  cleanup();
-  const emptyMsgs = loadMessages();
+  console.log("Test: getMessages returns empty array when no file exists");
+  cleanup(DATA_DIR);
+  const emptyMsgs = getMessages();
   assert.deepStrictEqual(emptyMsgs, []);
   console.log("  PASSED\n");
 
   console.log("Test: saveMessage appends messages");
   saveMessage({ from: "alice", to: "bob", message: "Hello Bob!" });
   saveMessage({ from: "bob", to: "alice", message: "Hi Alice!" });
-  const msgs = loadMessages();
+  const msgs = getMessages();
   assert.strictEqual(msgs.length, 2);
   assert.strictEqual(msgs[0].from, "alice");
   assert.strictEqual(msgs[0].to, "bob");
@@ -77,7 +77,7 @@ function runTests() {
   console.log("  PASSED\n");
 
   console.log("Test: saveMessage preserves provided timestamp");
-  cleanup();
+  cleanup(DATA_DIR);
   const customTime = "2024-01-15T10:30:00.000Z";
   saveMessage({
     from: "alice",
@@ -85,12 +85,12 @@ function runTests() {
     message: "timed msg",
     timestamp: customTime,
   });
-  const timedMsgs = loadMessages();
+  const timedMsgs = getMessages();
   assert.strictEqual(timedMsgs[0].timestamp, customTime);
   console.log("  PASSED\n");
 
   console.log("Test: getMessages returns all messages when no filter");
-  cleanup();
+  cleanup(DATA_DIR);
   saveMessage({ from: "alice", to: "bob", message: "msg1" });
   saveMessage({ from: "charlie", to: "bob", message: "msg2" });
   saveMessage({ from: "bob", to: "alice", message: "msg3" });
@@ -129,14 +129,14 @@ function runTests() {
   console.log("Test: handles corrupted ndjson messages file gracefully");
   const messagesFile = path.join(DATA_DIR, "messages.ndjson");
   fs.writeFileSync(messagesFile, "bad line\n{\"from\":\"a\",\"to\":\"b\",\"message\":\"ok\",\"timestamp\":\"t\"}\n", "utf8");
-  const partialMsgs = loadMessages();
+  const partialMsgs = getMessages();
   // Should skip the bad line and parse the valid one
   assert.strictEqual(partialMsgs.length, 1);
   assert.strictEqual(partialMsgs[0].from, "a");
   console.log("  PASSED\n");
 
   // Cleanup
-  cleanup();
+  cleanup(DATA_DIR);
 
   console.log("All tests passed!");
 }

@@ -1,15 +1,14 @@
-const { saveMessage } = require("../store");
+const { saveMessage, getCurrentUser } = require("../store");
 
-async function message(req, res) {
+function message(req, res) {
   const { from, message: msg } = req.body;
-  const currentUser = process.env.USERNAME || "unknown";
 
   console.log(`${from}: ${msg}`);
 
   // Persist the incoming message
   saveMessage({
-    from: from,
-    to: currentUser,
+    from,
+    to: getCurrentUser(),
     message: msg,
   });
 

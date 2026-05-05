@@ -1,21 +1,20 @@
 const assert = require("assert");
 const http = require("http");
-const fs = require("fs");
 const path = require("path");
 
 // Set test environment
 process.env.PORT = "9998";
 process.env.USERNAME = "testnode";
 
-const { DATA_DIR } = require("../src/store");
+const { DATA_DIR, loadPeers, getMessages } = require("../src/store");
+const { cleanup } = require("./helpers");
 
-// Clean up before tests
-function cleanup() {
-  const peersFile = path.join(DATA_DIR, "peers.json");
-  const messagesFile = path.join(DATA_DIR, "messages.ndjson");
-  if (fs.existsSync(peersFile)) fs.unlinkSync(peersFile);
-  if (fs.existsSync(messagesFile)) fs.unlinkSync(messagesFile);
-}
+const express = require("express");
+const { register } = require("../src/routes/register");
+const { lookup } = require("../src/routes/lookup");
+const { message } = require("../src/routes/message");
+const { send } = require("../src/routes/send");
+const { history } = require("../src/routes/history");
 
 function makeRequest(options, body) {
   return new Promise((resolve, reject) => {
@@ -37,17 +36,9 @@ function makeRequest(options, body) {
 }
 
 async function runTests() {
-  cleanup();
+  cleanup(DATA_DIR);
 
   console.log("Running integration tests...\n");
-
-  // Start the express app (without the readline/setTimeout logic)
-  const express = require("express");
-  const { register } = require("../src/routes/register");
-  const { lookup } = require("../src/routes/lookup");
-  const { message } = require("../src/routes/message");
-  const { send } = require("../src/routes/send");
-  const { history } = require("../src/routes/history");
 
   const app = express();
   app.use(express.json());
@@ -75,11 +66,33 @@ async function runTests() {
     assert.strictEqual(regRes.status, 200);
 
     // Verify peer was persisted
-    const { loadPeers } = require("../src/store");
     const peers = loadPeers();
     const alicePeer = peers.find((p) => p.user === "alice");
     assert.ok(alicePeer, "alice should be persisted");
     assert.strictEqual(alicePeer.uri, "http://localhost:4000");
+    console.log("  PASSED\n");
+
+    // Test: Re-register with updated URI
+    console.log("Test: POST /register updates URI for existing peer");
+    const regRes2 = await makeRequest(
+      {
+        hostname: "localhost",
+        port: 9998,
+        path: "/register",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+      { user: "alice", uri: "http://localhost:7001" }
+    );
+    assert.strictEqual(regRes2.status, 200);
+    const updatedPeers = loadPeers();
+    const updatedAlice = updatedPeers.find((p) => p.user === "alice");
+    assert.strictEqual(updatedAlice.uri, "http://localhost:7001");
+    // Should not duplicate the entry
+    assert.strictEqual(
+      updatedPeers.filter((p) => p.user === "alice").length,
+      1
+    );
     console.log("  PASSED\n");
 
     // Test: Lookup the registered peer
@@ -108,8 +121,7 @@ async function runTests() {
     );
     assert.strictEqual(msgRes.status, 200);
 
-    const { loadMessages } = require("../src/store");
-    const messages = loadMessages();
+    const messages = getMessages();
     assert.strictEqual(messages.length, 1);
     assert.strictEqual(messages[0].from, "alice");
     assert.strictEqual(messages[0].to, "testnode");
@@ -167,10 +179,22 @@ async function runTests() {
     assert.strictEqual(histLimited.body.messages[0].from, "bob");
     console.log("  PASSED\n");
 
+    // Test: History with invalid limit returns 400
+    console.log("Test: GET /history?limit=abc returns 400");
+    const histBad = await makeRequest({
+      hostname: "localhost",
+      port: 9998,
+      path: "/history?limit=abc",
+      method: "GET",
+    });
+    assert.strictEqual(histBad.status, 400);
+    assert.ok(histBad.body.error);
+    console.log("  PASSED\n");
+
     console.log("All integration tests passed!");
   } finally {
     server.close();
-    cleanup();
+    cleanup(DATA_DIR);
   }
 }
 

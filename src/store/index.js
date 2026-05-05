@@ -1,8 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 
-// Data directory lives next to the project root, namespaced by port
-// so multiple nodes on the same machine don't collide.
+// DATA_DIR is computed once at require-time from process.env.PORT.
+// This means the port value is locked in at first import and cannot be
+// changed later. Callers must set process.env.PORT before requiring
+// this module.
 const DATA_DIR = path.join(
   __dirname,
   "..",
@@ -11,13 +13,21 @@ const DATA_DIR = path.join(
   `node-${process.env.PORT || 4000}`
 );
 
-// Ensure the data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
 const PEERS_FILE = path.join(DATA_DIR, "peers.json");
 const MESSAGES_FILE = path.join(DATA_DIR, "messages.ndjson");
+
+/**
+ * Ensure the data directory exists. Must be called once at startup
+ * before any read/write operations.
+ */
+function init() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+// Auto-initialize on first require for convenience.
+init();
 
 /**
  * Atomically write JSON data to a file.
@@ -124,11 +134,21 @@ function getMessages(peerUser, limit) {
   return messages;
 }
 
+/**
+ * Return the current user's name from environment, or "unknown" as fallback.
+ * Centralises the `process.env.USERNAME || "unknown"` pattern.
+ * @returns {string}
+ */
+function getCurrentUser() {
+  return process.env.USERNAME || "unknown";
+}
+
 module.exports = {
+  init,
   loadPeers,
   savePeers,
   saveMessage,
-  loadMessages,
   getMessages,
+  getCurrentUser,
   DATA_DIR,
 };

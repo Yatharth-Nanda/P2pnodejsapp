@@ -15,7 +15,6 @@ const setupSocketEvents = require("./server/serverevents");
 const { initiateChat } = require("./client/client.js");
 const http = require("http");
 const socketIo = require("socket.io");
-const readline = require("readline");
 const { rl } = require("./util/readlineinterface.js");
 
 const port = process.env.PORT || 4000;
