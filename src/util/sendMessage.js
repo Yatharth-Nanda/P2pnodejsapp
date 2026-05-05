@@ -1,4 +1,5 @@
 const fetch = require("cross-fetch");
+const { v4: uuidv4 } = require("uuid");
 const { seeds } = require("../server/seeds");
 
 /**
@@ -35,8 +36,11 @@ async function sendMessage(from, message, uri, toUser) {
       throw new Error("Recipient is offline and no username provided for store-and-forward");
     }
 
+    // Generate a unique message ID so that duplicate storage across seeds can be deduplicated on retrieval
+    const messageId = uuidv4();
+
     // Store the message on all reachable seed servers for redundancy
-    const storeResults = await storeOnSeedServers(from, message, toUser);
+    const storeResults = await storeOnSeedServers(from, message, toUser, messageId);
 
     if (storeResults.length === 0) {
       throw new Error("Recipient is offline and no seed servers are reachable to queue the message");
@@ -48,30 +52,28 @@ async function sendMessage(from, message, uri, toUser) {
 }
 
 /**
- * Store a message on all reachable seed servers.
+ * Store a message on all reachable seed servers in parallel.
  * Returns an array of seed URIs that successfully stored the message.
  */
-async function storeOnSeedServers(from, message, toUser) {
-  const results = [];
-
-  for (const seed of seeds) {
-    try {
+async function storeOnSeedServers(from, message, toUser, messageId) {
+  const settled = await Promise.allSettled(
+    seeds.map(async (seed) => {
       const response = await fetch(`${seed.uri}/store-message`, {
         method: "POST",
-        body: JSON.stringify({ to: toUser, from, message }),
+        body: JSON.stringify({ to: toUser, from, message, messageId }),
         headers: { "content-type": "application/json" },
       });
 
       if (response.ok) {
-        results.push(seed.uri);
+        return seed.uri;
       }
-    } catch (err) {
-      // Seed server unreachable, skip
-      console.log(`[store-and-forward] Seed server ${seed.uri} unreachable: ${err.message}`);
-    }
-  }
+      throw new Error(`Seed ${seed.uri} responded with status ${response.status}`);
+    })
+  );
 
-  return results;
+  return settled
+    .filter((r) => r.status === "fulfilled")
+    .map((r) => r.value);
 }
 
 module.exports = { sendMessage };

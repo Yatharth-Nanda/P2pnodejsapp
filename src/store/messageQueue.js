@@ -7,13 +7,15 @@ const pendingMessages = {};
  * @param {string} to - recipient username
  * @param {string} from - sender username
  * @param {string} message - message content
+ * @param {string} [messageId] - unique message ID for deduplication (caller should provide one)
  * @returns {object} the stored message object
  */
-function enqueueMessage(to, from, message) {
+function enqueueMessage(to, from, message, messageId) {
   if (!pendingMessages[to]) {
     pendingMessages[to] = [];
   }
   const entry = {
+    id: messageId || null,
     from,
     message,
     timestamp: Date.now(),
@@ -38,21 +40,11 @@ function dequeueMessages(user) {
 }
 
 /**
- * Peek at pending messages without removing them.
- * @param {string} user - the recipient username
- * @returns {Array} array of pending message objects (empty if none)
+ * Clear all pending messages for all users.
+ * Primarily useful for test cleanup.
  */
-function peekMessages(user) {
-  return pendingMessages[user] || [];
+function clearAllMessages() {
+  Object.keys(pendingMessages).forEach((k) => delete pendingMessages[k]);
 }
 
-/**
- * Get the count of pending messages for a user.
- * @param {string} user - the recipient username
- * @returns {number}
- */
-function getPendingCount(user) {
-  return (pendingMessages[user] || []).length;
-}
-
-module.exports = { enqueueMessage, dequeueMessages, peekMessages, getPendingCount };
+module.exports = { enqueueMessage, dequeueMessages, clearAllMessages };

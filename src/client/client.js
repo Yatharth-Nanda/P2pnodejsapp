@@ -1,12 +1,7 @@
-const { lookupUser } = require("../util/lookupUser.js");
-const { sendMessage } = require("../util/sendMessage.js"); // Placeholder import for sendMessage
-const { v4: uuidv4 } = require("uuid");
-const { getCurrentUri } = require("../util/getCurrentUri.js");
-const dotenv = require("dotenv"); 
-dotenv.config(); 
-const { getRandomSeedServer } = require("../server/getRandomSeedServer.js");
+const { findUser } = require("../util/findUser.js");
+const dotenv = require("dotenv");
+dotenv.config();
 const clientIo = require("socket.io-client");
-const readline = require("readline");
 const { rl } = require("../util/readlineinterface.js");
 
 async function initiateChat() {
@@ -24,22 +19,9 @@ async function initiateChat() {
   });
 }
 
-async function findUser(to) {
-  try {
-    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
-    console.log("found user", foundUser);
-    return foundUser; // Return the found user information
-  } catch (err) {
-    console.log(err);
-    throw new Error("User not found");
-  }
-}
-
 // Main function to setup chat if user is found
 async function setupChat(user) {
   try {
-    const port = process.env.PORT || process.argv[2] || 3000;
-    const ownUrl = `http://localhost:${port}`;
     const otherPeerUrl = user.uri; // Use the found user's URL for the chat session
 
     const socket = clientIo(otherPeerUrl, {
@@ -51,7 +33,7 @@ async function setupChat(user) {
     socket.on("connect", () => {
       console.log("Connected to the other peer. Type your messages:");
       rl.on("line", (line) => {
-        username = process.env.USERNAME;
+        const username = process.env.USERNAME;
         if (line === "quit") {
           console.log("Disconnecting from the peer.");
           socket.disconnect();

@@ -1,15 +1,22 @@
 const { lookupUser } = require("../util/lookupUser");
 const { sendMessage } = require("../util/sendMessage");
 const { v4: uuidv4 } = require("uuid");
-const { getCurrentUri } = require("../util/getCurrentUri");
-const dotenv = require("dotenv");
 const { getRandomSeedServer } = require("../server/getRandomSeedServer");
+const { findUser } = require("../util/findUser");
 
 async function send(req, res) {
   const { to, message } = req.body;
+
+  let foundUser;
   try {
-    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
+    foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
     console.log("found user", foundUser);
+  } catch (err) {
+    console.log(err);
+    return res.status(404).send("user not found");
+  }
+
+  try {
     const result = await sendMessage(process.env.USERNAME, message, foundUser.uri, to);
 
     if (result.status === "delivered") {
@@ -23,18 +30,10 @@ async function send(req, res) {
     }
   } catch (err) {
     console.log(err);
-    return res.status(404).send("user not found");
-  }
-}
-
-async function findUser(to) {
-  try {
-    const foundUser = await lookupUser(getRandomSeedServer().uri, to, uuidv4());
-    console.log("found user", foundUser);
-    return foundUser; // Return the found user information
-  } catch (err) {
-    console.log(err);
-    throw new Error("User not found");
+    return res.status(503).json({
+      error: "Failed to deliver or queue message",
+      detail: err.message,
+    });
   }
 }
 

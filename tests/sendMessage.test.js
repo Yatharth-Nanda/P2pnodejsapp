@@ -4,6 +4,11 @@ const { sendMessage } = require("../src/util/sendMessage");
 jest.mock("cross-fetch");
 const fetch = require("cross-fetch");
 
+// Mock uuid to return a predictable value
+jest.mock("uuid", () => ({
+  v4: () => "test-uuid-1234",
+}));
+
 // Mock seeds to control seed server list
 jest.mock("../src/server/seeds", () => ({
   seeds: [
@@ -43,6 +48,27 @@ describe("sendMessage with store-and-forward", () => {
     expect(result.storedOn).toContain("http://localhost:5000");
     // 1 direct attempt + 2 seed store attempts
     expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("should include messageId in store-and-forward requests to seed servers", async () => {
+    // Direct send fails
+    fetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+    // Store on seeds succeed
+    fetch.mockResolvedValueOnce({ ok: true });
+    fetch.mockResolvedValueOnce({ ok: true });
+
+    await sendMessage("bob", "Hello!", "http://localhost:3001", "alice");
+
+    // Check that the store-message calls include the messageId
+    const storeCalls = fetch.mock.calls.filter(([url]) => url.includes("/store-message"));
+    expect(storeCalls).toHaveLength(2);
+    for (const [, opts] of storeCalls) {
+      const body = JSON.parse(opts.body);
+      expect(body.messageId).toBe("test-uuid-1234");
+      expect(body.to).toBe("alice");
+      expect(body.from).toBe("bob");
+      expect(body.message).toBe("Hello!");
+    }
   });
 
   it("should store on available seeds even if some are unreachable", async () => {
