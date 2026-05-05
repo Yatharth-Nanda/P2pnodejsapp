@@ -1,18 +1,77 @@
 const fetch = require("cross-fetch");
+const { seeds } = require("../server/seeds");
 
-function sendMessage(from, message, uri) {
+/**
+ * Attempt to send a message directly to the recipient's URI.
+ * If the recipient is unreachable (offline), store the message on seed servers
+ * for later delivery (store-and-forward).
+ *
+ * @param {string} from - sender username
+ * @param {string} message - message content
+ * @param {string} uri - recipient's URI
+ * @param {string} toUser - recipient's username (needed for store-and-forward)
+ * @returns {Promise<object>} result with status "delivered" or "queued"
+ */
+async function sendMessage(from, message, uri, toUser) {
   console.log("sendMessage called", from, message, uri);
-  return fetch(`${uri}/message`, {
-    //send to the uri of the user , it makes a post request to the uri ( so a different server )
-    method: "POST",
-    body: JSON.stringify({
-      from, // part of the message being sent
-      message,
-    }),
-    headers: {
-      "content-type": "application/json",
-    },
-  });
+
+  try {
+    const response = await fetch(`${uri}/message`, {
+      method: "POST",
+      body: JSON.stringify({ from, message }),
+      headers: { "content-type": "application/json" },
+    });
+
+    if (response.ok) {
+      return { status: "delivered", uri };
+    }
+
+    // Non-OK response — treat as unreachable and fall through to store-and-forward
+    throw new Error(`Recipient responded with status ${response.status}`);
+  } catch (err) {
+    console.log(`[store-and-forward] Recipient at ${uri} is unreachable: ${err.message}`);
+
+    if (!toUser) {
+      throw new Error("Recipient is offline and no username provided for store-and-forward");
+    }
+
+    // Store the message on all reachable seed servers for redundancy
+    const storeResults = await storeOnSeedServers(from, message, toUser);
+
+    if (storeResults.length === 0) {
+      throw new Error("Recipient is offline and no seed servers are reachable to queue the message");
+    }
+
+    console.log(`[store-and-forward] Message queued on ${storeResults.length} seed server(s) for "${toUser}"`);
+    return { status: "queued", storedOn: storeResults };
+  }
+}
+
+/**
+ * Store a message on all reachable seed servers.
+ * Returns an array of seed URIs that successfully stored the message.
+ */
+async function storeOnSeedServers(from, message, toUser) {
+  const results = [];
+
+  for (const seed of seeds) {
+    try {
+      const response = await fetch(`${seed.uri}/store-message`, {
+        method: "POST",
+        body: JSON.stringify({ to: toUser, from, message }),
+        headers: { "content-type": "application/json" },
+      });
+
+      if (response.ok) {
+        results.push(seed.uri);
+      }
+    } catch (err) {
+      // Seed server unreachable, skip
+      console.log(`[store-and-forward] Seed server ${seed.uri} unreachable: ${err.message}`);
+    }
+  }
+
+  return results;
 }
 
 module.exports = { sendMessage };
