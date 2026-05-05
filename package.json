@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/store.test.js && node tests/integration.test.js",
+    "test": "node tests/store.test.js && node tests/integration.test.js && node tests/send.test.js",
     "dev": "nodemon ./src/index.js"
   },
   "keywords": [],

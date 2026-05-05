@@ -191,6 +191,37 @@ async function runTests() {
     assert.ok(histBad.body.error);
     console.log("  PASSED\n");
 
+    // Test: POST /message rejects missing fields
+    console.log("Test: POST /message returns 400 when from is missing");
+    const msgBadRes = await makeRequest(
+      {
+        hostname: "localhost",
+        port: 9998,
+        path: "/message",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+      { message: "no sender" }
+    );
+    assert.strictEqual(msgBadRes.status, 400);
+    assert.ok(msgBadRes.body.error);
+    console.log("  PASSED\n");
+
+    console.log("Test: POST /message returns 400 when message is missing");
+    const msgBadRes2 = await makeRequest(
+      {
+        hostname: "localhost",
+        port: 9998,
+        path: "/message",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+      { from: "alice" }
+    );
+    assert.strictEqual(msgBadRes2.status, 400);
+    assert.ok(msgBadRes2.body.error);
+    console.log("  PASSED\n");
+
     console.log("All integration tests passed!");
   } finally {
     server.close();
