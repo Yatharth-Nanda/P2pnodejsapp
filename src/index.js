@@ -10,10 +10,12 @@ const { seeds } = require("./server/seeds.js");
 const { servers } = require("./server/servers.js");
 const { send } = require("./routes/send.js");
 const { message } = require("./routes/message.js");
+const { storeMessage, getPendingMessages } = require("./routes/storeForward.js");
+const { fetchPendingMessages } = require("./util/fetchPendingMessages.js");
 const setupSocketEvents = require("./server/serverevents");
 const { initiateChat } = require("./client/client.js");
 const http = require("http");
-const socketIo = require("socket.io"); // Corrected import for socket.ioyat
+const socketIo = require("socket.io"); // Corrected import for socket.io
 const readline = require("readline");
 const { rl } = require("./util/readlineinterface.js");
 
@@ -39,12 +41,16 @@ app.get("/lookup", lookup);
 app.post("/send", send);
 app.post("/message", message);
 
+// Store-and-forward routes
+app.post("/store-message", storeMessage);
+app.get("/pending-messages", getPendingMessages);
+
 server.listen(port, () => {
   //firing up the server
   console.log(`Listening on port ${port}`);
 });
 
-setTimeout(intialise, 10000); 
+setTimeout(intialise, 10000);
 
 async function intialise() {
   // set up new instances of the server which will register with a seed server
@@ -57,6 +63,11 @@ async function intialise() {
   const randomserverUri = getRandomSeedServer();
 
   await registerWithSeedServer(randomserverUri.uri);
+
+  // After registering, fetch any pending messages that were stored while offline
+  if (process.env.USERNAME) {
+    await fetchPendingMessages(process.env.USERNAME);
+  }
 }
 
 // Prompt the user after 20 seconds
