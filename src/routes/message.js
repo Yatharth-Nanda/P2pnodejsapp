@@ -1,8 +1,18 @@
-const { Request, Response } = require("express");
+const { saveMessage } = require("../store");
 
 async function message(req, res) {
-  // console.log("bdoy", req.body);
-  console.log(`${req.body.from}: ${req.body.message}`);
+  const { from, message: msg } = req.body;
+  const currentUser = process.env.USERNAME || "unknown";
+
+  console.log(`${from}: ${msg}`);
+
+  // Persist the incoming message
+  saveMessage({
+    from: from,
+    to: currentUser,
+    message: msg,
+  });
+
   res.json({ message: "success" });
 }
 
