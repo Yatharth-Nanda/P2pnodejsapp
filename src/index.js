@@ -10,16 +10,15 @@ const { seeds } = require("./server/seeds.js");
 const { servers } = require("./server/servers.js");
 const { send } = require("./routes/send.js");
 const { message } = require("./routes/message.js");
+const { history } = require("./routes/history.js");
 const setupSocketEvents = require("./server/serverevents");
 const { initiateChat } = require("./client/client.js");
 const http = require("http");
-const socketIo = require("socket.io"); // Corrected import for socket.ioyat
-const readline = require("readline");
+const socketIo = require("socket.io");
 const { rl } = require("./util/readlineinterface.js");
 
 const port = process.env.PORT || 4000;
 
-//rn seed servers themselvees might register up to other seed servers
 const app = express();
 const server = http.createServer(app);
 
@@ -34,23 +33,27 @@ setupSocketEvents(io);
 app.use(express.json());
 
 //methods used to send back status and responses
-app.post("/register", register); //register is the function to be called
+app.post("/register", register);
 app.get("/lookup", lookup);
 app.post("/send", send);
 app.post("/message", message);
+app.get("/history", history);
 
 server.listen(port, () => {
-  //firing up the server
   console.log(`Listening on port ${port}`);
 });
 
-setTimeout(intialise, 10000); 
+// Log persisted peers that were loaded from disk
+if (servers.length > 0) {
+  console.log(`Restored ${servers.length} peer(s) from local store`);
+}
+
+setTimeout(intialise, 10000);
 
 async function intialise() {
   // set up new instances of the server which will register with a seed server
 
   for (let seed of seeds) {
-    //use of to iterate over the seeds
     addNode(seed);
   }
 

@@ -8,6 +8,7 @@ const { getRandomSeedServer } = require("../server/getRandomSeedServer.js");
 const clientIo = require("socket.io-client");
 const readline = require("readline");
 const { rl } = require("../util/readlineinterface.js");
+const { saveMessage } = require("../store");
 
 async function initiateChat() {
   rl.question("Enter the username you want to connect to: ", async (input) => {
@@ -58,6 +59,13 @@ async function setupChat(user) {
           return;
         }
         socket.emit("chat", { line, username });
+
+        // Persist outgoing message on the sender's side
+        saveMessage({
+          from: username,
+          to: user.user,
+          message: line,
+        });
       });
     });
 
